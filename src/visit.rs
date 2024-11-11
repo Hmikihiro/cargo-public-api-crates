@@ -91,6 +91,7 @@ fn visit_trait(trait_: &Trait, v: &mut impl Visitor) {
     let Trait {
         is_auto: _,
         is_unsafe: _,
+        is_object_safe: _,
         items: _,
         generics,
         bounds,
@@ -376,6 +377,10 @@ fn visit_type(type_: &Type, v: &mut impl Visitor) {
         }
         Type::Slice(type_) => visit_type(type_, v),
         Type::Array { type_, len: _ } => visit_type(type_, v),
+        Type::Pat {
+            type_,
+            __pat_unstable_do_not_use: _,
+        } => visit_type(type_, v),
         Type::ImplTrait(bounds) => {
             for bound in bounds {
                 visit_generic_bound(bound, v);
