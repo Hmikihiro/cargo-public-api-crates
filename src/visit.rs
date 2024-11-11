@@ -45,7 +45,7 @@ pub fn visit_item(item: &Item, v: &mut impl Visitor) {
         ItemEnum::Trait(trait_) => visit_trait(trait_, v),
         ItemEnum::TraitAlias(trait_alias) => visit_trait_alias(trait_alias, v),
         ItemEnum::OpaqueTy(opaque_type) => visit_opaque_type(opaque_type, v),
-        ItemEnum::Constant(constant) => visit_constant(constant, v),
+        ItemEnum::Constant { type_, const_: _ } => visit_type(type_, v),
         ItemEnum::Static(static_) => visit_static(static_, v),
         ItemEnum::Import(import) => {
             v.visit_import(import);
@@ -286,7 +286,7 @@ fn visit_generic_bound(bound: &GenericBound, v: &mut impl Visitor) {
 fn visit_term(term: &Term, v: &mut impl Visitor) {
     match term {
         Term::Type(type_) => visit_type(type_, v),
-        Term::Constant(constant) => visit_constant(constant, v),
+        Term::Constant(_) => {}
     }
 }
 
@@ -348,19 +348,9 @@ fn visit_generic_arg(arg: &GenericArg, v: &mut impl Visitor) {
     match arg {
         GenericArg::Lifetime(_) => {}
         GenericArg::Type(type_) => visit_type(type_, v),
-        GenericArg::Const(constant) => visit_constant(constant, v),
+        GenericArg::Const(_) => {}
         GenericArg::Infer => {}
     }
-}
-
-fn visit_constant(constant: &Constant, v: &mut impl Visitor) {
-    let Constant {
-        type_,
-        expr: _,
-        value: _,
-        is_literal: _,
-    } = constant;
-    visit_type(type_, v);
 }
 
 fn visit_type(type_: &Type, v: &mut impl Visitor) {
