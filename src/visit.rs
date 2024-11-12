@@ -273,6 +273,7 @@ fn visit_generic_bound(bound: &GenericBound, v: &mut impl Visitor) {
             }
         }
         GenericBound::Outlives(_) => {}
+        GenericBound::Use(_) => {}
     }
 }
 
