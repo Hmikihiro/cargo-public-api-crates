@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 use rustdoc_types::{
-    DynTrait, Enum, FnDecl, Function, FunctionPointer, GenericArg, GenericArgs, GenericBound,
-    GenericParamDef, GenericParamDefKind, Generics, Impl, Import, Item, ItemEnum, Path, PolyTrait,
-    Static, Struct, StructKind, Term, Trait, TraitAlias, Type, TypeAlias, TypeBinding,
-    TypeBindingKind, Union, WherePredicate,
+    AssocItemConstraint, AssocItemConstraintKind, DynTrait, Enum, Function, FunctionPointer,
+    FunctionSignature, GenericArg, GenericArgs, GenericBound, GenericParamDef, GenericParamDefKind,
+    Generics, Impl, Item, ItemEnum, Path, PolyTrait, Static, Struct, StructKind, Term, Trait,
+    TraitAlias, Type, TypeAlias, Union, Use, WherePredicate,
 };
 
 #[allow(unused_variables)]
@@ -13,7 +13,7 @@ pub trait Visitor {
     fn visit_path(&mut self, path: &Path) {}
 
     #[inline]
-    fn visit_import(&mut self, import: &Import) {}
+    fn visit_use(&mut self, use_: &Use) {}
 }
 
 pub fn visit_item(item: &Item, v: &mut impl Visitor) {
@@ -24,17 +24,17 @@ pub fn visit_item(item: &Item, v: &mut impl Visitor) {
         ItemEnum::AssocType {
             generics,
             bounds,
-            default,
+            type_,
         } => {
             visit_generics(generics, v);
             for bound in bounds {
                 visit_generic_bound(bound, v);
             }
-            if let Some(default) = default {
-                visit_type(default, v);
+            if let Some(type_) = type_ {
+                visit_type(type_, v);
             }
         }
-        ItemEnum::AssocConst { type_, default: _ } => {
+        ItemEnum::AssocConst { type_, value: _ } => {
             visit_type(type_, v);
         }
         ItemEnum::Impl(impl_) => visit_impl(impl_, v),
@@ -46,15 +46,15 @@ pub fn visit_item(item: &Item, v: &mut impl Visitor) {
         ItemEnum::TraitAlias(trait_alias) => visit_trait_alias(trait_alias, v),
         ItemEnum::Constant { type_, const_: _ } => visit_type(type_, v),
         ItemEnum::Static(static_) => visit_static(static_, v),
-        ItemEnum::Import(import) => {
-            v.visit_import(import);
+        ItemEnum::Use(use_) => {
+            v.visit_use(use_);
         }
 
         // ignore these because they don't contain anything of interest
         ItemEnum::Module(_) => {}
         ItemEnum::Variant(_) => {}
         ItemEnum::ExternCrate { .. } => {}
-        ItemEnum::ForeignType => {}
+        ItemEnum::ExternType => {}
         ItemEnum::Primitive(_) => {}
         ItemEnum::ProcMacro(_) => {}
         ItemEnum::Macro(_) => {}
@@ -64,7 +64,7 @@ pub fn visit_item(item: &Item, v: &mut impl Visitor) {
 fn visit_static(static_: &Static, v: &mut impl Visitor) {
     let Static {
         type_,
-        mutable: _,
+        is_mutable: _,
         expr: _,
     } = static_;
     visit_type(type_, v);
@@ -97,7 +97,7 @@ fn visit_trait(trait_: &Trait, v: &mut impl Visitor) {
 fn visit_enum(enum_: &Enum, v: &mut impl Visitor) {
     let Enum {
         generics,
-        variants_stripped: _,
+        has_stripped_variants: _,
         variants: _,
         impls: _,
     } = enum_;
@@ -107,7 +107,7 @@ fn visit_enum(enum_: &Enum, v: &mut impl Visitor) {
 fn visit_union(union: &Union, v: &mut impl Visitor) {
     let Union {
         generics,
-        fields_stripped: _,
+        has_stripped_fields: _,
         fields: _,
         impls: _,
     } = union;
@@ -122,8 +122,8 @@ fn visit_impl(impl_: &Impl, v: &mut impl Visitor) {
         trait_,
         for_,
         items: _,
-        negative: _,
-        synthetic: _,
+        is_negative: _,
+        is_synthetic: _,
         blanket_impl,
     } = impl_;
     // blanket impls in other crates that happen to match one of our types shouldn't count
@@ -159,28 +159,28 @@ fn visit_struct_kind(kind: &StructKind, _v: &mut impl Visitor) {
         StructKind::Tuple(_) => {}
         StructKind::Plain {
             fields: _,
-            fields_stripped: _,
+            has_stripped_fields: _,
         } => {}
     }
 }
 
 fn visit_function(fun: &Function, v: &mut impl Visitor) {
     let Function {
-        decl,
+        sig,
         generics,
         header: _,
         has_body: _,
     } = fun;
-    visit_fn_decl(decl, v);
+    visit_fn_sig(sig, v);
     visit_generics(generics, v);
 }
 
-fn visit_fn_decl(decl: &FnDecl, v: &mut impl Visitor) {
-    let FnDecl {
+fn visit_fn_sig(sig: &FunctionSignature, v: &mut impl Visitor) {
+    let FunctionSignature {
         inputs,
         output,
-        c_variadic: _,
-    } = decl;
+        is_c_variadic: _,
+    } = sig;
     for (_, ty) in inputs {
         visit_type(ty, v);
     }
@@ -236,7 +236,7 @@ fn visit_generic_param_def_kind(kind: &GenericParamDefKind, v: &mut impl Visitor
         GenericParamDefKind::Type {
             bounds,
             default,
-            synthetic: _,
+            is_synthetic: _,
         } => {
             for bound in bounds {
                 visit_generic_bound(bound, v);
@@ -289,11 +289,11 @@ fn visit_path(path: &Path, v: &mut impl Visitor) {
 
 fn visit_generic_args(args: &GenericArgs, v: &mut impl Visitor) {
     match args {
-        GenericArgs::AngleBracketed { args, bindings } => {
+        GenericArgs::AngleBracketed { args, constraints } => {
             for arg in args {
                 visit_generic_arg(arg, v);
             }
-            for binding in bindings {
+            for binding in constraints {
                 visit_type_binding(binding, v);
             }
         }
@@ -308,20 +308,20 @@ fn visit_generic_args(args: &GenericArgs, v: &mut impl Visitor) {
     }
 }
 
-fn visit_type_binding(binding: &TypeBinding, v: &mut impl Visitor) {
-    let TypeBinding {
+fn visit_type_binding(constraints: &AssocItemConstraint, v: &mut impl Visitor) {
+    let AssocItemConstraint {
         name: _,
         args,
         binding,
-    } = binding;
+    } = constraints;
     visit_generic_args(args, v);
     visit_type_binding_kind(binding, v);
 }
 
-fn visit_type_binding_kind(binding: &TypeBindingKind, v: &mut impl Visitor) {
+fn visit_type_binding_kind(binding: &AssocItemConstraintKind, v: &mut impl Visitor) {
     match binding {
-        TypeBindingKind::Equality(term) => visit_term(term, v),
-        TypeBindingKind::Constraint(bounds) => {
+        AssocItemConstraintKind::Equality(term) => visit_term(term, v),
+        AssocItemConstraintKind::Constraint(bounds) => {
             for bound in bounds {
                 visit_generic_bound(bound, v)
             }
@@ -362,10 +362,13 @@ fn visit_type(type_: &Type, v: &mut impl Visitor) {
             }
         }
         Type::Infer => {}
-        Type::RawPointer { mutable: _, type_ } => visit_type(type_, v),
+        Type::RawPointer {
+            is_mutable: _,
+            type_,
+        } => visit_type(type_, v),
         Type::BorrowedRef {
             lifetime: _,
-            mutable: _,
+            is_mutable: _,
             type_,
         } => visit_type(type_, v),
         Type::QualifiedPath {
@@ -385,11 +388,11 @@ fn visit_type(type_: &Type, v: &mut impl Visitor) {
 
 fn visit_function_pointer(fn_pointer: &FunctionPointer, v: &mut impl Visitor) {
     let FunctionPointer {
-        decl,
+        sig,
         generic_params,
         header: _,
     } = fn_pointer;
-    visit_fn_decl(decl, v);
+    visit_fn_sig(sig, v);
     for generic_param in generic_params {
         visit_generic_param_def(generic_param, v);
     }

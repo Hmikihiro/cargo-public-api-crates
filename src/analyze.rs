@@ -5,7 +5,7 @@ use std::{
 
 use crate::visit::{self, Visitor};
 use anyhow::Result;
-use rustdoc_types::{Crate, Id, Import, Span};
+use rustdoc_types::{Crate, Id, Span, Use};
 
 pub struct AnalyzeOutput {
     pub krate: Crate,
@@ -67,8 +67,8 @@ impl<'a> Visitor for ItemVisitor<'a> {
         self.on_id(&path.id);
     }
 
-    fn visit_import(&mut self, import: &Import) {
-        let Some(id) = &import.id else { return };
+    fn visit_use(&mut self, use_: &Use) {
+        let Some(id) = &use_.id else { return };
         self.on_id(id);
     }
 }
