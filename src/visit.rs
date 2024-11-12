@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 use rustdoc_types::{
-    Constant, DynTrait, Enum, FnDecl, Function, FunctionPointer, GenericArg, GenericArgs,
-    GenericBound, GenericParamDef, GenericParamDefKind, Generics, Impl, Import, Item, ItemEnum,
-    OpaqueTy, Path, PolyTrait, Static, Struct, StructKind, Term, Trait, TraitAlias, Type,
-    TypeAlias, TypeBinding, TypeBindingKind, Union, WherePredicate,
+    DynTrait, Enum, FnDecl, Function, FunctionPointer, GenericArg, GenericArgs, GenericBound,
+    GenericParamDef, GenericParamDefKind, Generics, Impl, Import, Item, ItemEnum, OpaqueTy, Path,
+    PolyTrait, Static, Struct, StructKind, Term, Trait, TraitAlias, Type, TypeAlias, TypeBinding,
+    TypeBindingKind, Union, WherePredicate,
 };
 
 #[allow(unused_variables)]
@@ -231,14 +231,7 @@ fn visit_where_predicate(where_predicate: &WherePredicate, v: &mut impl Visitor)
                 visit_generic_param_def(generic_param, v);
             }
         }
-        WherePredicate::RegionPredicate {
-            lifetime: _,
-            bounds,
-        } => {
-            for bound in bounds {
-                visit_generic_bound(bound, v);
-            }
-        }
+        WherePredicate::LifetimePredicate { .. } => {}
         WherePredicate::EqPredicate { lhs, rhs } => {
             visit_type(lhs, v);
             visit_term(rhs, v);
