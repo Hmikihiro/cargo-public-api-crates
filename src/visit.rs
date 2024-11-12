@@ -2,8 +2,8 @@
 
 use rustdoc_types::{
     DynTrait, Enum, FnDecl, Function, FunctionPointer, GenericArg, GenericArgs, GenericBound,
-    GenericParamDef, GenericParamDefKind, Generics, Impl, Import, Item, ItemEnum, OpaqueTy, Path,
-    PolyTrait, Static, Struct, StructKind, Term, Trait, TraitAlias, Type, TypeAlias, TypeBinding,
+    GenericParamDef, GenericParamDefKind, Generics, Impl, Import, Item, ItemEnum, Path, PolyTrait,
+    Static, Struct, StructKind, Term, Trait, TraitAlias, Type, TypeAlias, TypeBinding,
     TypeBindingKind, Union, WherePredicate,
 };
 
@@ -44,7 +44,6 @@ pub fn visit_item(item: &Item, v: &mut impl Visitor) {
 
         ItemEnum::Trait(trait_) => visit_trait(trait_, v),
         ItemEnum::TraitAlias(trait_alias) => visit_trait_alias(trait_alias, v),
-        ItemEnum::OpaqueTy(opaque_type) => visit_opaque_type(opaque_type, v),
         ItemEnum::Constant { type_, const_: _ } => visit_type(type_, v),
         ItemEnum::Static(static_) => visit_static(static_, v),
         ItemEnum::Import(import) => {
@@ -69,14 +68,6 @@ fn visit_static(static_: &Static, v: &mut impl Visitor) {
         expr: _,
     } = static_;
     visit_type(type_, v);
-}
-
-fn visit_opaque_type(opaque_type: &OpaqueTy, v: &mut impl Visitor) {
-    let OpaqueTy { bounds, generics } = opaque_type;
-    for bound in bounds {
-        visit_generic_bound(bound, v);
-    }
-    visit_generics(generics, v);
 }
 
 fn visit_trait_alias(trait_alias: &TraitAlias, v: &mut impl Visitor) {
