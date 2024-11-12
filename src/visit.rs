@@ -82,7 +82,7 @@ fn visit_trait(trait_: &Trait, v: &mut impl Visitor) {
     let Trait {
         is_auto: _,
         is_unsafe: _,
-        is_object_safe: _,
+        is_dyn_compatible: _,
         items: _,
         generics,
         bounds,
