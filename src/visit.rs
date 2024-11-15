@@ -218,11 +218,10 @@ fn visit_generic_param_def(param: &GenericParamDef, v: &mut impl Visitor) {
 fn visit_where_predicate(where_predicate: &WherePredicate, v: &mut impl Visitor) {
     match where_predicate {
         WherePredicate::BoundPredicate {
-            type_,
+            type_: _,
             bounds,
             generic_params,
         } => {
-            visit_type(type_, v);
             for bound in bounds {
                 visit_generic_bound(bound, v);
             }
